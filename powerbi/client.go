@@ -72,6 +72,9 @@ type Client struct {
 	WorkspaceInfo           *WorkspaceInfoClient
 	WidelySharedArtifacts   *WidelySharedArtifactsClient
 	InformationProtection   *InformationProtectionClient
+	PushDatasets            *PushDatasetsClient
+	Subscriptions           *SubscriptionsClient
+	Bookmarks               *BookmarksClient
 }
 
 // NewClient creates a new Power BI client with Azure credentials
@@ -142,6 +145,9 @@ func NewClient(credential azcore.TokenCredential, options *ClientOptions) (*Clie
 	client.WorkspaceInfo = &WorkspaceInfoClient{client: client}
 	client.WidelySharedArtifacts = &WidelySharedArtifactsClient{client: client}
 	client.InformationProtection = &InformationProtectionClient{client: client}
+	client.PushDatasets = &PushDatasetsClient{client: client}
+	client.Subscriptions = &SubscriptionsClient{client: client}
+	client.Bookmarks = &BookmarksClient{client: client}
 
 	return client, nil
 }

@@ -30,6 +30,53 @@ type TilesClient struct {
 	client *Client
 }
 
+// GenerateTileTokenInGroup generates an embed token for the specified tile in the specified workspace
+func (c *TilesClient) GenerateTileTokenInGroup(ctx context.Context, groupID, dashboardID, tileID string, request GenerateTokenRequest) (*EmbedToken, error) {
+	if groupID == "" {
+		return nil, fmt.Errorf("groupID cannot be empty")
+	}
+	if dashboardID == "" {
+		return nil, fmt.Errorf("dashboardID cannot be empty")
+	}
+	if tileID == "" {
+		return nil, fmt.Errorf("tileID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/groups/%s/dashboards/%s/tiles/%s/GenerateToken", groupID, dashboardID, tileID)
+
+	var result EmbedToken
+	if err := c.client.doRequest(ctx, "POST", path, request, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GenerateTileToken generates an embed token for the specified tile
+func (c *TilesClient) GenerateTileToken(ctx context.Context, dashboardID, tileID string, request GenerateTokenRequest) (*EmbedToken, error) {
+	if dashboardID == "" {
+		return nil, fmt.Errorf("dashboardID cannot be empty")
+	}
+	if tileID == "" {
+		return nil, fmt.Errorf("tileID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/dashboards/%s/tiles/%s/GenerateToken", dashboardID, tileID)
+
+	var result EmbedToken
+	if err := c.client.doRequest(ctx, "POST", path, request, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GenerateTokenRequest represents a request to generate a token
+type GenerateTokenRequest struct {
+	AccessLevel *string `json:"accessLevel,omitempty"` // View, Edit, Create
+	Identities  []EffectiveIdentity `json:"identities,omitempty"`
+}
+
 // UsersClient handles operations for Power BI users
 type UsersClient struct {
 	client *Client
@@ -107,6 +154,84 @@ func (c *DataflowsClient) GetDataflows(ctx context.Context, groupID string) (*Da
 		return nil, err
 	}
 	return &result, nil
+}
+
+// GetDataflow returns the specified dataflow from the specified workspace
+func (c *DataflowsClient) GetDataflow(ctx context.Context, groupID, dataflowID string) (*Dataflow, error) {
+	if groupID == "" {
+		return nil, fmt.Errorf("groupID cannot be empty")
+	}
+	if dataflowID == "" {
+		return nil, fmt.Errorf("dataflowID cannot be empty")
+	}
+
+	var result Dataflow
+	if err := c.client.doRequest(ctx, "GET", fmt.Sprintf("/groups/%s/dataflows/%s", groupID, dataflowID), nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteDataflow deletes the specified dataflow from the specified workspace
+func (c *DataflowsClient) DeleteDataflow(ctx context.Context, groupID, dataflowID string) error {
+	if groupID == "" {
+		return fmt.Errorf("groupID cannot be empty")
+	}
+	if dataflowID == "" {
+		return fmt.Errorf("dataflowID cannot be empty")
+	}
+
+	return c.client.doRequest(ctx, "DELETE", fmt.Sprintf("/groups/%s/dataflows/%s", groupID, dataflowID), nil, nil)
+}
+
+// RefreshDataflow triggers a refresh of the specified dataflow
+func (c *DataflowsClient) RefreshDataflow(ctx context.Context, groupID, dataflowID string, request *DataflowRefreshRequest) error {
+	if groupID == "" {
+		return fmt.Errorf("groupID cannot be empty")
+	}
+	if dataflowID == "" {
+		return fmt.Errorf("dataflowID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/groups/%s/dataflows/%s/refreshes", groupID, dataflowID)
+	return c.client.doRequest(ctx, "POST", path, request, nil)
+}
+
+// GetDataflowTransactions returns the list of transactions for the specified dataflow
+func (c *DataflowsClient) GetDataflowTransactions(ctx context.Context, groupID, dataflowID string) (*DataflowTransactions, error) {
+	if groupID == "" {
+		return nil, fmt.Errorf("groupID cannot be empty")
+	}
+	if dataflowID == "" {
+		return nil, fmt.Errorf("dataflowID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/groups/%s/dataflows/%s/transactions", groupID, dataflowID)
+	
+	var result DataflowTransactions
+	if err := c.client.doRequest(ctx, "GET", path, nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DataflowRefreshRequest represents a request to refresh a dataflow
+type DataflowRefreshRequest struct {
+	NotifyOption *string `json:"notifyOption,omitempty"` // MailOnFailure, MailOnCompletion, NoNotification
+}
+
+// DataflowTransactions represents a list of dataflow transactions
+type DataflowTransactions struct {
+	Value []DataflowTransaction `json:"value"`
+}
+
+// DataflowTransaction represents a dataflow transaction
+type DataflowTransaction struct {
+	ID               *string `json:"id,omitempty"`
+	RefreshType      *string `json:"refreshType,omitempty"`
+	StartTime        *string `json:"startTime,omitempty"`
+	EndTime          *string `json:"endTime,omitempty"`
+	Status           *string `json:"status,omitempty"`
 }
 
 // GetCapacities returns a list of capacities
@@ -201,10 +326,13 @@ func (c *ImportsClient) postImportFileInternal(ctx context.Context, groupID stri
 	}
 	path += buildQueryParams(queryParams)
 
-	// Note: The actual implementation would require multipart/form-data support
-	// For now, this is a placeholder structure
-	// You would need to implement proper multipart upload in the doRequest function
+	// Use multipart upload
+	var result Import
+	additionalFields := make(map[string]string)
+	if err := c.client.uploadFileWithResponse(ctx, path, file, filename, additionalFields, &result); err != nil {
+		return nil, err
+	}
 	
-	return nil, fmt.Errorf("file upload not yet implemented - requires multipart/form-data support")
+	return &result, nil
 }
 
