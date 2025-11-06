@@ -3,6 +3,7 @@ package powerbi
 import (
 	"context"
 	"fmt"
+	"io"
 )
 
 // ReportsClient handles operations for Power BI reports
@@ -313,5 +314,113 @@ func (c *ReportsClient) GetPagesInGroup(ctx context.Context, groupID, reportID s
 	}
 
 	return result.Value, nil
+}
+
+// ExportToFileStatus represents the status of an export to file operation
+type ExportToFileStatus struct {
+	ID                 *string    `json:"id,omitempty"`
+	CreatedDateTime    *string    `json:"createdDateTime,omitempty"`
+	LastActionDateTime *string    `json:"lastActionDateTime,omitempty"`
+	Status             *string    `json:"status,omitempty"`
+	PercentComplete    *int       `json:"percentComplete,omitempty"`
+	ResourceLocation   *string    `json:"resourceLocation,omitempty"`
+	ResourceFileExtension *string `json:"resourceFileExtension,omitempty"`
+	ExpirationTime     *string    `json:"expirationTime,omitempty"`
+}
+
+// GetExportToFileStatus returns the status of the export to file job
+func (c *ReportsClient) GetExportToFileStatus(ctx context.Context, reportID, exportID string) (*ExportToFileStatus, error) {
+	if reportID == "" {
+		return nil, fmt.Errorf("reportID cannot be empty")
+	}
+	if exportID == "" {
+		return nil, fmt.Errorf("exportID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/reports/%s/exports/%s", reportID, exportID)
+
+	var result ExportToFileStatus
+	if err := c.client.doRequest(ctx, "GET", path, nil, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GetExportToFileStatusInGroup returns the status of the export to file job in a group
+func (c *ReportsClient) GetExportToFileStatusInGroup(ctx context.Context, groupID, reportID, exportID string) (*ExportToFileStatus, error) {
+	if groupID == "" {
+		return nil, fmt.Errorf("groupID cannot be empty")
+	}
+	if reportID == "" {
+		return nil, fmt.Errorf("reportID cannot be empty")
+	}
+	if exportID == "" {
+		return nil, fmt.Errorf("exportID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/groups/%s/reports/%s/exports/%s", groupID, reportID, exportID)
+
+	var result ExportToFileStatus
+	if err := c.client.doRequest(ctx, "GET", path, nil, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GetFileOfExportToFile retrieves the actual file from an export to file job
+func (c *ReportsClient) GetFileOfExportToFile(ctx context.Context, reportID, exportID string) ([]byte, error) {
+	if reportID == "" {
+		return nil, fmt.Errorf("reportID cannot be empty")
+	}
+	if exportID == "" {
+		return nil, fmt.Errorf("exportID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/reports/%s/exports/%s/file", reportID, exportID)
+
+	resp, err := c.client.doRequestRaw(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read the file content
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file content: %w", err)
+	}
+
+	return content, nil
+}
+
+// GetFileOfExportToFileInGroup retrieves the actual file from an export to file job in a group
+func (c *ReportsClient) GetFileOfExportToFileInGroup(ctx context.Context, groupID, reportID, exportID string) ([]byte, error) {
+	if groupID == "" {
+		return nil, fmt.Errorf("groupID cannot be empty")
+	}
+	if reportID == "" {
+		return nil, fmt.Errorf("reportID cannot be empty")
+	}
+	if exportID == "" {
+		return nil, fmt.Errorf("exportID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/groups/%s/reports/%s/exports/%s/file", groupID, reportID, exportID)
+
+	resp, err := c.client.doRequestRaw(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read the file content
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file content: %w", err)
+	}
+
+	return content, nil
 }
 

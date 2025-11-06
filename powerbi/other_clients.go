@@ -2,6 +2,7 @@ package powerbi
 
 import (
 	"context"
+	"fmt"
 )
 
 // DataflowsClient handles operations for Power BI dataflows
@@ -142,5 +143,68 @@ func (c *ImportsClient) GetImportsInGroup(ctx context.Context, groupID string) (
 		return nil, err
 	}
 	return &result, nil
+}
+
+// PostImportOptions contains options for importing a file
+type PostImportOptions struct {
+	DatasetDisplayName *string
+	NameConflict       *string // CreateOrOverwrite, Abort, Overwrite, GenerateUniqueName
+	SkipReport         *bool
+}
+
+// PostImportFile uploads and imports a PBIX file to My Workspace
+func (c *ImportsClient) PostImportFile(ctx context.Context, file []byte, filename string, options *PostImportOptions) (*Import, error) {
+	return c.postImportFileInternal(ctx, "", file, filename, options)
+}
+
+// PostImportFileInGroup uploads and imports a PBIX file to the specified workspace
+func (c *ImportsClient) PostImportFileInGroup(ctx context.Context, groupID string, file []byte, filename string, options *PostImportOptions) (*Import, error) {
+	if groupID == "" {
+		return nil, fmt.Errorf("groupID cannot be empty")
+	}
+	return c.postImportFileInternal(ctx, groupID, file, filename, options)
+}
+
+// postImportFileInternal is the internal implementation for file import
+func (c *ImportsClient) postImportFileInternal(ctx context.Context, groupID string, file []byte, filename string, options *PostImportOptions) (*Import, error) {
+	if len(file) == 0 {
+		return nil, fmt.Errorf("file cannot be empty")
+	}
+	if filename == "" {
+		return nil, fmt.Errorf("filename cannot be empty")
+	}
+
+	// Build the path
+	var path string
+	if groupID == "" {
+		path = "/imports"
+	} else {
+		path = fmt.Sprintf("/groups/%s/imports", groupID)
+	}
+
+	// Add query parameters
+	queryParams := make(map[string]string)
+	if options != nil {
+		if options.DatasetDisplayName != nil {
+			queryParams["datasetDisplayName"] = *options.DatasetDisplayName
+		}
+		if options.NameConflict != nil {
+			queryParams["nameConflict"] = *options.NameConflict
+		}
+		if options.SkipReport != nil {
+			if *options.SkipReport {
+				queryParams["skipReport"] = "true"
+			} else {
+				queryParams["skipReport"] = "false"
+			}
+		}
+	}
+	path += buildQueryParams(queryParams)
+
+	// Note: The actual implementation would require multipart/form-data support
+	// For now, this is a placeholder structure
+	// You would need to implement proper multipart upload in the doRequest function
+	
+	return nil, fmt.Errorf("file upload not yet implemented - requires multipart/form-data support")
 }
 

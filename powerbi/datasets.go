@@ -381,3 +381,160 @@ type DatasourceSelector struct {
 	ConnectionDetails *ConnectionDetails `json:"connectionDetails,omitempty"`
 }
 
+// GetParameters returns a list of parameters for the specified dataset
+func (c *DatasetsClient) GetParameters(ctx context.Context, datasetID string) (*DatasetParameters, error) {
+	if datasetID == "" {
+		return nil, fmt.Errorf("datasetID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/datasets/%s/parameters", datasetID)
+
+	var result DatasetParameters
+	if err := c.client.doRequest(ctx, "GET", path, nil, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GetParametersInGroup returns a list of parameters for the specified dataset in the specified workspace
+func (c *DatasetsClient) GetParametersInGroup(ctx context.Context, groupID, datasetID string) (*DatasetParameters, error) {
+	if groupID == "" {
+		return nil, fmt.Errorf("groupID cannot be empty")
+	}
+	if datasetID == "" {
+		return nil, fmt.Errorf("datasetID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/groups/%s/datasets/%s/parameters", groupID, datasetID)
+
+	var result DatasetParameters
+	if err := c.client.doRequest(ctx, "GET", path, nil, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// UpdateParameters updates the parameters for the specified dataset
+func (c *DatasetsClient) UpdateParameters(ctx context.Context, datasetID string, request UpdateParametersRequest) error {
+	if datasetID == "" {
+		return fmt.Errorf("datasetID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/datasets/%s/Default.UpdateParameters", datasetID)
+	return c.client.doRequest(ctx, "POST", path, request, nil)
+}
+
+// UpdateParametersInGroup updates the parameters for the specified dataset in the specified workspace
+func (c *DatasetsClient) UpdateParametersInGroup(ctx context.Context, groupID, datasetID string, request UpdateParametersRequest) error {
+	if groupID == "" {
+		return fmt.Errorf("groupID cannot be empty")
+	}
+	if datasetID == "" {
+		return fmt.Errorf("datasetID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/groups/%s/datasets/%s/Default.UpdateParameters", groupID, datasetID)
+	return c.client.doRequest(ctx, "POST", path, request, nil)
+}
+
+// DatasetParameters represents dataset parameters
+type DatasetParameters struct {
+	Value []DatasetParameter `json:"value"`
+}
+
+// DatasetParameter represents a single dataset parameter
+type DatasetParameter struct {
+	Name          *string `json:"name,omitempty"`
+	Type          *string `json:"type,omitempty"`
+	CurrentValue  *string `json:"currentValue,omitempty"`
+	SuggestedValues []string `json:"suggestedValues,omitempty"`
+	IsRequired    *bool   `json:"isRequired,omitempty"`
+}
+
+// UpdateParametersRequest represents a request to update dataset parameters
+type UpdateParametersRequest struct {
+	UpdateDetails []UpdateParameterDetails `json:"updateDetails"`
+}
+
+// UpdateParameterDetails represents details for updating a parameter
+type UpdateParameterDetails struct {
+	Name     *string `json:"name,omitempty"`
+	NewValue *string `json:"newValue,omitempty"`
+}
+
+// ExecuteQueries executes DAX queries against the specified dataset
+func (c *DatasetsClient) ExecuteQueries(ctx context.Context, datasetID string, request ExecuteQueriesRequest) (*ExecuteQueriesResponse, error) {
+	if datasetID == "" {
+		return nil, fmt.Errorf("datasetID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/datasets/%s/executeQueries", datasetID)
+
+	var result ExecuteQueriesResponse
+	if err := c.client.doRequest(ctx, "POST", path, request, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// ExecuteQueriesInGroup executes DAX queries against the specified dataset in the specified workspace
+func (c *DatasetsClient) ExecuteQueriesInGroup(ctx context.Context, groupID, datasetID string, request ExecuteQueriesRequest) (*ExecuteQueriesResponse, error) {
+	if groupID == "" {
+		return nil, fmt.Errorf("groupID cannot be empty")
+	}
+	if datasetID == "" {
+		return nil, fmt.Errorf("datasetID cannot be empty")
+	}
+
+	path := fmt.Sprintf("/groups/%s/datasets/%s/executeQueries", groupID, datasetID)
+
+	var result ExecuteQueriesResponse
+	if err := c.client.doRequest(ctx, "POST", path, request, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// ExecuteQueriesRequest represents a request to execute queries
+type ExecuteQueriesRequest struct {
+	Queries               []DatasetQuery `json:"queries"`
+	SerializerSettings    *SerializerSettings `json:"serializerSettings,omitempty"`
+	ImpersonatedUserName  *string `json:"impersonatedUserName,omitempty"`
+}
+
+// DatasetQuery represents a DAX query
+type DatasetQuery struct {
+	Query *string `json:"query,omitempty"`
+}
+
+// SerializerSettings represents serializer settings for query results
+type SerializerSettings struct {
+	IncludeNulls *bool `json:"includeNulls,omitempty"`
+}
+
+// ExecuteQueriesResponse represents the response from executing queries
+type ExecuteQueriesResponse struct {
+	Results []QueryResult `json:"results,omitempty"`
+	Error   *QueryError   `json:"error,omitempty"`
+}
+
+// QueryResult represents a single query result
+type QueryResult struct {
+	Tables []QueryTable `json:"tables,omitempty"`
+}
+
+// QueryTable represents a table in a query result
+type QueryTable struct {
+	Rows []map[string]interface{} `json:"rows,omitempty"`
+}
+
+// QueryError represents an error from query execution
+type QueryError struct {
+	Code    *string `json:"code,omitempty"`
+	Message *string `json:"message,omitempty"`
+}
+
